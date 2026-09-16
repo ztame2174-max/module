@@ -1,0 +1,109 @@
+import re
+import tkinter as tk
+from tkinter import filedialog, messagebox, ttk
+
+
+def find_emails(text, pattern=None):
+	return re.findall(pattern or r"[\w.+-]+@[\w-]+\.[\w.-]+", text)
+
+
+def find_urls(text, pattern=None):
+	return re.findall(pattern or r"https?://[^\s]+", text)
+
+
+def find_numbers(text, pattern=None):
+	return re.findall(pattern or r"[-+]?\d+(?:\.\d+)?", text)
+
+
+def find_words(text, pattern=None):
+	return re.findall(pattern or r"\b\w+\b", text, re.UNICODE)
+
+
+def split_lines(text, pattern=None):
+	return re.split(pattern or r"\r?\n", text)
+
+
+def replace_spaces(text, pattern=None):
+	return re.sub(pattern or r"\s+", " ", text).strip()
+
+
+def remove_html(text, pattern=None):
+	return re.sub(pattern or r"<[^>]*>", "", text)
+
+
+def mask_digits(text, pattern=None):
+	return re.sub(pattern or r"\d", "*", text)
+
+
+def find_hashtags(text, pattern=None):
+	return re.findall(pattern or r"#[\wก-๙]+", text, re.UNICODE)
+
+
+def custom_find(text, pattern=None):
+	if not pattern:
+		raise ValueError("กรุณาใส่ Regular Expression")
+	return re.findall(pattern, text, re.MULTILINE)
+
+
+FUNCTIONS = {
+	"ค้นหาอีเมล": find_emails,
+	"ค้นหา URL": find_urls,
+	"ค้นหาตัวเลข": find_numbers,
+	"ค้นหาคำ": find_words,
+	"แยกบรรทัด": split_lines,
+	"แทนที่ช่องว่าง": replace_spaces,
+	"ลบ HTML tag": remove_html,
+	"ปิดบังตัวเลข": mask_digits,
+	"ค้นหา Hashtag": find_hashtags,
+	"ค้นหาแบบกำหนดเอง": custom_find,
+}
+
+
+def load_file():
+	try:
+		path = filedialog.askopenfilename(filetypes=[("Text files", "*.txt"), ("All files", "*")])
+		if path:
+			with open(path, encoding="utf-8") as file:
+				source.delete("1.0", tk.END)
+				source.insert(tk.END, file.read())
+	except Exception as error:
+		messagebox.showerror("ข้อผิดพลาด", str(error))
+
+
+def process():
+	try:
+		result = FUNCTIONS[choice.get()](source.get("1.0", tk.END), parameter.get())
+		output.delete("1.0", tk.END)
+		output.insert(tk.END, "\n".join(map(str, result)) if isinstance(result, list) else result)
+	except re.error as error:
+		messagebox.showerror("Regular Expression ไม่ถูกต้อง", str(error))
+	except Exception as error:
+		messagebox.showerror("ข้อผิดพลาด", str(error))
+
+
+root = tk.Tk()
+root.title("Regex Text Processor")
+root.geometry("850x620")
+root.columnconfigure(0, weight=1)
+root.rowconfigure(1, weight=1)
+root.rowconfigure(3, weight=1)
+
+toolbar = ttk.Frame(root)
+toolbar.grid(row=0, column=0, sticky="ew", padx=8, pady=8)
+ttk.Button(toolbar, text="โหลดข้อความ", command=load_file).pack(side="left")
+choice = tk.StringVar(value=list(FUNCTIONS)[0])
+ttk.Label(toolbar, text="  ฟังก์ชัน:").pack(side="left")
+ttk.Combobox(toolbar, textvariable=choice, values=list(FUNCTIONS), state="readonly", width=23).pack(side="left")
+parameter = tk.StringVar()
+ttk.Label(toolbar, text="  Pattern (เว้นว่างใช้ค่าเริ่มต้น):").pack(side="left")
+ttk.Entry(toolbar, textvariable=parameter, width=35).pack(side="left", padx=4)
+ttk.Button(toolbar, text="ประมวลผล", command=process).pack(side="left")
+
+ttk.Label(root, text="ข้อความต้นฉบับ").grid(row=1, column=0, sticky="nw", padx=8)
+source = tk.Text(root, wrap="word", height=12)
+source.grid(row=1, column=0, sticky="nsew", padx=8, pady=(25, 8))
+ttk.Label(root, text="ผลลัพธ์").grid(row=2, column=0, sticky="nw", padx=8)
+output = tk.Text(root, wrap="word", height=12, background="#f2f2f2")
+output.grid(row=3, column=0, sticky="nsew", padx=8, pady=(25, 8))
+
+root.mainloop()
